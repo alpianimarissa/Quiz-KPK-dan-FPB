@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan KPK & FPB - Quiz Interaktif 30 Level SMP</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- MathJax Config -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            },
+            svg: { fontCache: 'global' }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        
+        /* Map Path Canvas styling */
+        .map-container {
+            position: relative;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f3e8ff 40%, #fef3c7 100%);
+        }
+
+        .level-node {
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .level-node:hover:not(.locked) {
+            transform: scale(1.15) translateY(-5px);
+        }
+        .level-node.locked {
+            filter: grayscale(0.5);
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .level-node.active-pulse {
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
+            70% { box-shadow: 0 0 0 18px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.12);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white custom-scrollbar">
+
+    <!-- TOP HEADER / DASHBOARD -->
+    <header class="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-indigo-100 px-4 py-3 shadow-sm">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg shadow-indigo-300">
+                    <i class="fa-solid fa-gamepad text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-heading font-extrabold text-base sm:text-lg bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        KPK & FPB Master
+                    </h1>
+                    <p class="text-[11px] text-slate-500 font-medium">Fase D Kelas 7 SMP • 30 Level Tantangan</p>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="flex items-center space-x-3 text-xs sm:text-sm">
+                <!-- Stars -->
+                <div class="flex items-center space-x-1.5 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 text-amber-800 shadow-sm">
+                    <i class="fa-solid fa-star text-amber-500 text-sm"></i>
+                    <span id="stat-stars" class="font-bold text-amber-900">0 / 90</span>
+                </div>
+                <!-- Total Score -->
+                <div class="flex items-center space-x-1.5 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 text-indigo-800 shadow-sm">
+                    <i class="fa-solid fa-trophy text-indigo-500 text-sm"></i>
+                    <span id="stat-score" class="font-bold text-indigo-900">0 Poin</span>
+                </div>
+                <!-- Sound Toggle -->
+                <button onclick="toggleSound()" id="sound-btn" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition shadow-sm">
+                    <i class="fa-solid fa-volume-high text-xs"></i>
+                </button>
+                <!-- Reset Progress Button -->
+                <button onclick="confirmResetProgress()" title="Reset Kemajuan" class="w-9 h-9 rounded-xl bg-white border border-rose-200 text-rose-500 hover:bg-rose-50 transition flex items-center justify-center shadow-sm">
+                    <i class="fa-solid fa-rotate-right text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN VIEW CONTAINER -->
+    <main class="flex-grow relative flex flex-col justify-center">
+
+        <!-- VIEW 1: MAP LEVEL VIEW -->
+        <section id="map-view" class="w-full min-h-[calc(100vh-65px)] map-container py-8 px-4 flex flex-col items-center">
+            
+            <!-- Map Banner Info -->
+            <div class="max-w-2xl w-full mb-6 glass-panel rounded-2xl p-5 text-center border border-indigo-100 shadow-xl space-y-2">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold border border-indigo-200">
+                    <i class="fa-solid fa-map-location-dot"></i> Peta Navigasi Level
+                </div>
+                <h2 class="font-heading text-xl sm:text-2xl font-bold text-slate-800">
+                    Selesaikan Soal, Buka Level & Kumpulkan Bintang!
+                </h2>
+                <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200 shadow-inner">
+                    <div id="progress-bar-fill" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full w-0 transition-all duration-500"></div>
+                </div>
+                <p id="progress-text" class="text-xs text-slate-600 font-medium">Kemajuan: 0 dari 30 Level Selesai (0%)</p>
+            </div>
+
+            <!-- Level Map Grid Container -->
+            <div class="max-w-4xl w-full relative">
+                <!-- Zone Indicators & Level Grid -->
+                <div id="map-grid" class="space-y-8 relative z-10 py-2">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: QUESTION CHALLENGE MODAL / VIEW -->
+        <section id="quiz-view" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+            <div class="max-w-2xl w-full glass-panel bg-white/95 rounded-3xl p-6 sm:p-8 border border-white shadow-2xl relative my-auto space-y-6">
+                
+                <!-- Quiz Header -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div class="flex items-center space-x-3">
+                        <span id="quiz-level-badge" class="px-3.5 py-1.5 rounded-xl bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold text-xs">
+                            Level 1
+                        </span>
+                        <span id="quiz-zone-tag" class="text-xs text-slate-500 font-semibold">
+                            Zona 1: Dasar KPK & FPB
+                        </span>
+                    </div>
+                    <button onclick="closeQuizToMap()" class="text-slate-500 hover:text-slate-800 transition text-sm flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 font-medium">
+                        <i class="fa-solid fa-xmark"></i> Batal
+                    </button>
+                </div>
+
+                <!-- Question Box -->
+                <div class="space-y-3">
+                    <h3 class="text-xs uppercase tracking-wider font-bold text-indigo-600">Pertanyaan Tantangan:</h3>
+                    <div id="quiz-question-text" class="text-base sm:text-lg font-semibold text-slate-800 leading-relaxed bg-gradient-to-r from-indigo-50/70 to-purple-50/70 p-5 rounded-2xl border border-indigo-100/80 shadow-sm">
+                        <!-- Math / Text Question -->
+                    </div>
+                </div>
+
+                <!-- Answer Options -->
+                <div id="quiz-options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <!-- Dynamic Answer Buttons -->
+                </div>
+
+                <!-- Explanation / Pembahasan Box (Revealed after answering) -->
+                <div id="quiz-explanation-box" class="hidden space-y-3 p-5 rounded-2xl border transition-all duration-300">
+                    <div class="flex items-center space-x-2">
+                        <i id="exp-icon" class="text-lg"></i>
+                        <h4 id="exp-title" class="font-heading font-bold text-sm sm:text-base"></h4>
+                    </div>
+                    <div id="exp-text" class="text-xs sm:text-sm leading-relaxed text-slate-700 bg-white p-4 rounded-xl border border-slate-200 font-mono shadow-inner">
+                        <!-- MathJax Detailed Steps -->
+                    </div>
+
+                    <!-- Navigation back to map button -->
+                    <div class="pt-2">
+                        <button onclick="backToMapAfterAnswer()" id="btn-return-map" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-200 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-map"></i> Kembali ke Peta Level & Buka Selanjutnya
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- RESET CONFIRMATION MODAL -->
+    <div id="reset-modal" class="hidden fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="max-w-md w-full glass-panel bg-white rounded-2xl p-6 border border-slate-200 text-center space-y-4 shadow-2xl">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-500 flex items-center justify-center text-xl mx-auto border border-rose-200">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="font-heading font-bold text-slate-800 text-lg">Reset Seluruh Kemajuan?</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Semua level yang terbuka, skor total, dan bintang yang telah kamu peroleh akan dihapus permanen.
+            </p>
+            <div class="flex items-center space-x-3 pt-2">
+                <button onclick="closeResetModal()" class="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold hover:bg-slate-200 transition">
+                    Batal
+                </button>
+                <button onclick="executeResetProgress()" class="flex-1 py-2.5 rounded-xl bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 shadow-md shadow-rose-200 transition">
+                    Ya, Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT GAME LOGIC -->
+    <script>
+        /* ==========================================================================
+           1. 30 QUESTIONS DATABASE (KPK & FPB KELAS 7 SMP)
+           ========================================================================== */
+        const quizDatabase = [
+            // ZONA 1: DASAR KPK & FPB BILANGAN (LEVEL 1 - 8)
+            {
+                level: 1,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Berapakah nilai Faktor Persekutuan Terbesar (FPB) dari bilangan $24$ dan $36$?",
+                options: ["6", "18", "72", "12"],
+                correct: 3,
+                explanation: "<strong>Pembahasan Trik Selisih:</strong><br>• Hitung selisih $36 - 24 = 12$.<br>• Uji pembagian: $24 \\div 12 = 2$ (pas) dan $36 \\div 12 = 3$ (pas).<br>• Jadi, $\\text{FPB}(24, 36) = 12$."
+            },
+            {
+                level: 2,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Berapakah nilai Kelipatan Persekutuan Terkecil (KPK) dari $12$ dan $18$?",
+                options: ["24", "48", "36", "72"],
+                correct: 2,
+                explanation: "<strong>Pembahasan:</strong><br>• Kelipatan 12 = 12, 24, <b>36</b>, 48...<br>• Kelipatan 18 = 18, <b>36</b>, 54...<br>• Kelipatan persekutuan terkecil pertama adalah $36$."
+            },
+            {
+                level: 3,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Gunakan Trik Selisih untuk menentukan FPB dari $45$ dan $75$!",
+                options: ["15", "5", "25", "30"],
+                correct: 0,
+                explanation: "<strong>Pembahasan:</strong><br>• Selisih $|75 - 45| = 30$.<br>• Angka $30$ tidak membagi habis $45$. Faktor terbesar dari $30$ adalah $15$.<br>• $45 \\div 15 = 3$ dan $75 \\div 15 = 5$. Maka $\\text{FPB} = 15$."
+            },
+            {
+                level: 4,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Berapakah KPK dari bilangan $15$ dan $20$?",
+                options: ["30", "45", "90", "60"],
+                correct: 3,
+                explanation: "<strong>Pembahasan:</strong><br>• Faktorisasi prima: $15 = 3 \\times 5$ dan $20 = 2^2 \\times 5$.<br>• $\\text{KPK} = 2^2 \\times 3 \\times 5 = 4 \\times 3 \\times 5 = 60$."
+            },
+            {
+                level: 5,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Berapakah FPB dari $48$ dan $72$?",
+                options: ["12", "24", "16", "36"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• Selisih $72 - 48 = 24$.<br>• $48 \\div 24 = 2$ dan $72 \\div 24 = 3$ (Keduanya terbagi habis).<br>• Maka $\\text{FPB}(48, 72) = 24$."
+            },
+            {
+                level: 6,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Tentukan KPK dari tiga bilangan sekaligus: $8$, $12$, dan $16$!",
+                options: ["32", "64", "96", "48"],
+                correct: 3,
+                explanation: "<strong>Pembahasan:</strong><br>• $8 = 2^3$, $12 = 2^2 \\times 3$, $16 = 2^4$.<br>• Ambil pangkat terbesar seluruh faktor prima: $2^4 \\times 3 = 16 \\times 3 = 48$."
+            },
+            {
+                level: 7,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Diketahui dua bilangan $A$ dan $B$ memiliki $\\text{FPB} = 6$ dan perkalian keduanya $A \\times B = 432$. Berapakah nilai $\\text{KPK}(A, B)$?",
+                options: ["36", "72", "54", "108"],
+                correct: 1,
+                explanation: "<strong>Pembahasan Teorema Perkalian:</strong><br>• Rumus: $\\text{KPK} \\times \\text{FPB} = A \\times B$<br>• $\\text{KPK} = \\frac{A \\times B}{\\text{FPB}} = \\frac{432}{6} = 72$."
+            },
+            {
+                level: 8,
+                zone: "Zona 1: Fondasi KPK & FPB",
+                question: "Tentukan FPB dari $108$ dan $144$!",
+                options: ["18", "24", "36", "54"],
+                correct: 2,
+                explanation: "<strong>Pembahasan:</strong><br>• Selisih $144 - 108 = 36$.<br>• Uji: $108 \\div 36 = 3$ dan $144 \\div 36 = 4$. Pas!<br>• Maka $\\text{FPB} = 36$."
+            },
+
+            // ZONA 2: KPK & FPB BENTUK ALJABAR (LEVEL 9 - 16)
+            {
+                level: 9,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Berapakah FPB dari suku aljabar $6x$ dan $9x^2$?",
+                options: ["$6x$", "$3x^2$", "$3x$", "$18x$"],
+                correct: 2,
+                explanation: "<strong>Pembahasan FPB Aljabar:</strong><br>• FPB Koefisien: $\\text{FPB}(6, 9) = 3$.<br>• Variabel: Ambil huruf sama pangkat terkecil $\\rightarrow x^1 = x$.<br>• Jadi FPB = $3x$."
+            },
+            {
+                level: 10,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Tentukan KPK dari suku aljabar $4a^2$ dan $6a$!",
+                options: ["$2a$", "$12a$", "$24a^2$", "$12a^2$"],
+                correct: 3,
+                explanation: "<strong>Pembahasan KPK Aljabar:</strong><br>• KPK Koefisien: $\\text{KPK}(4, 6) = 12$.<br>• Variabel: Ambil pangkat terbesar $\\rightarrow a^2$.<br>• Jadi KPK = $12a^2$."
+            },
+            {
+                level: 11,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Berapakah FPB dari suku aljabar $12x^2y$ dan $18xy^3$?",
+                options: ["$6x^2y^3$", "$6xy$", "$36xy$", "$12xy$"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{FPB}(12, 18) = 6$.<br>• Pangkat terkecil $x$: $x^1 = x$.<br>• Pangkat terkecil $y$: $y^1 = y$.<br>• Maka FPB = $6xy$."
+            },
+            {
+                level: 12,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Berapakah KPK dari suku aljabar $8p^3q$ dan $12pq^2$?",
+                options: ["$24p^3q^2$", "$4pq$", "$24pq$", "$96p^3q^2$"],
+                correct: 0,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{KPK}(8, 12) = 24$.<br>• Pangkat terbesar $p$: $p^3$.<br>• Pangkat terbesar $q$: $q^2$.<br>• Maka KPK = $24p^3q^2$."
+            },
+            {
+                level: 13,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Berapakah FPB dari $15a^3b^2c$ dan $25ab^4$?",
+                options: ["$5a^3b^4c$", "$75ab^2$", "$5abc$", "$5ab^2$"],
+                correct: 3,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{FPB}(15, 25) = 5$.<br>• Variabel $a$: pangkat terkecil $a^1$. Variabel $b$: pangkat terkecil $b^2$.<br>• Variabel $c$ hanya ada di suku pertama (abaikan pada FPB).<br>• Jadi FPB = $5ab^2$."
+            },
+            {
+                level: 14,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Tentukan KPK dari $9x^2y^3$ dan $15x^4y$!",
+                options: ["$3x^2y$", "$45x^4y^3$", "$45x^2y$", "$135x^4y^3$"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{KPK}(9, 15) = 45$.<br>• Pangkat terbesar $x$: $x^4$. Pangkat terbesar $y$: $y^3$.<br>• Jadi KPK = $45x^4y^3$."
+            },
+            {
+                level: 15,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Manakah FPB dari suku $14m^2n^3$ dan $21m^3n$?",
+                options: ["$7mn$", "$42m^3n^3$", "$7m^2n$", "$14m^2n$"],
+                correct: 2,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{FPB}(14, 21) = 7$.<br>• Pangkat terkecil $m$: $m^2$. Pangkat terkecil $n$: $n^1$.<br>• Jadi FPB = $7m^2n$."
+            },
+            {
+                level: 16,
+                zone: "Zona 2: Bentuk Aljabar SMP",
+                question: "Berapakah KPK dari $10a^2b^3c$ dan $15ab^2c^4$?",
+                options: ["$5ab^2c$", "$30abc$", "$150a^2b^3c^4$", "$30a^2b^3c^4$"],
+                correct: 3,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{KPK}(10, 15) = 30$.<br>• Seluruh variabel pangkat terbesar: $a^2$, $b^3$, $c^4$.<br>• Jadi KPK = $30a^2b^3c^4$."
+            },
+
+            // ZONA 3: SOAL CERITA & APLIKASI NYATA (LEVEL 17 - 24)
+            {
+                level: 17,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Pak Budi memiliki 30 pulpen dan 45 buku. Ia ingin membaginya ke kantong plastik secara adil tanpa sisa. Jumlah kantong terbanyak yang dibutuhkan adalah...",
+                options: ["15 kantong", "5 kantong", "10 kantong", "30 kantong"],
+                correct: 0,
+                explanation: "<strong>Pembahasan (Aplikasi FPB):</strong><br>• Pembagian barang sama banyak mengindikasikan konsep <b>FPB</b>.<br>• $\\text{FPB}(30, 45) = 15$.<br>• Jadi dibutuhkan maksimal $15$ kantong plastik."
+            },
+            {
+                level: 18,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Andi les Matematika tiap 4 hari sekali, Budi tiap 6 hari sekali. Jika mereka les bersama tanggal 2 Mei, tanggal berapa mereka les bersama lagi?",
+                options: ["10 Mei", "12 Mei", "16 Mei", "14 Mei"],
+                correct: 3,
+                explanation: "<strong>Pembahasan (Aplikasi KPK):</strong><br>• Perulangan hari bersama mengindikasikan konsep <b>KPK</b>.<br>• $\\text{KPK}(4, 6) = 12$ hari.<br>• Tanggal les bersama = $2\\text{ Mei} + 12\\text{ hari} = 14\\text{ Mei}$."
+            },
+            {
+                level: 19,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Tiga buah lampu hias berkedip masing-masing setiap 6 detik, 8 detik, dan 12 detik. Setiap berapa detik ketiga lampu berkedip bersamaan?",
+                options: ["24 detik", "16 detik", "36 detik", "48 detik"],
+                correct: 0,
+                explanation: "<strong>Pembahasan:</strong><br>• Cari $\\text{KPK}(6, 8, 12)$.<br>• $6 = 2 \\times 3$, $8 = 2^3$, $12 = 2^2 \\times 3$.<br>• $\\text{KPK} = 2^3 \\times 3 = 8 \\times 3 = 24$ detik."
+            },
+            {
+                level: 20,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Ibu Rina memiliki 48 kue bolu dan 60 kue nastar untuk dimasukkan ke sebanyak mungkin kotak makanan secara sama rata. Berapa kue bolu pada setiap kotak?",
+                options: ["5 kue", "12 kue", "4 kue", "15 kue"],
+                correct: 2,
+                explanation: "<strong>Pembahasan:</strong><br>• Jumlah kotak terbanyak = $\\text{FPB}(48, 60) = 12$ kotak.<br>• Jumlah kue bolu per kotak = $48 \\div 12 = 4$ kue bolu."
+            },
+            {
+                level: 21,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Bus A berangkat setiap 15 menit, Bus B berangkat setiap 20 menit. Jika kedua bus berangkat bersama pukul 07:00, pukul berapa keduanya berangkat bersama lagi?",
+                options: ["07:35 WIB", "08:00 WIB", "07:45 WIB", "08:15 WIB"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{KPK}(15, 20) = 60$ menit = 1 jam.<br>• Waktu berikutnya = $07:00 + 1\\text{ jam} = 08:00\\text{ WIB}$."
+            },
+            {
+                level: 22,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Panitia pentas seni membungkus 72 kaos merah dan 90 kaos biru ke sebanyak mungkin paket berhadiah sama rata. Berapa jumlah TOTAL kaos dalam tiap paket?",
+                options: ["7 kaos", "9 kaos", "8 kaos", "18 kaos"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• Jumlah paket = $\\text{FPB}(72, 90) = 18$ paket.<br>• Kaos merah per paket = $72 \\div 18 = 4$.<br>• Kaos biru per paket = $90 \\div 18 = 5$.<br>• Total kaos per paket = $4 + 5 = 9$ kaos."
+            },
+            {
+                level: 23,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Dua pita merah (90 cm) dan putih (120 cm) dipotong menjadi bagian-bagian sama panjang tanpa sisa. Panjang potongan pita terpanjang adalah...",
+                options: ["30 cm", "15 cm", "20 cm", "60 cm"],
+                correct: 0,
+                explanation: "<strong>Pembahasan:</strong><br>• Potongan pita terpanjang = $\\text{FPB}(90, 120)$.<br>• Selisih $120 - 90 = 30$. Karena $90 \\div 30 = 3$ dan $120 \\div 30 = 4$, maka $\\text{FPB} = 30\\text{ cm}$."
+            },
+            {
+                level: 24,
+                zone: "Zona 3: Soal Cerita & Aplikasi",
+                question: "Ayah memberi uang saku kepada Kakak setiap 5 hari dan Adik setiap 7 hari. Jika hari ini Ayah memberi uang saku bersamaan pada hari Senin, hari apa mereka mendapat uang saku bersamaan lagi?",
+                options: ["Selasa", "Senin", "Rabu", "Kamis"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{KPK}(5, 7) = 35$ hari.<br>• $35 \\div 7 = 5$ minggu tepat (sisa 0 hari).<br>• Hari Senin + 35 hari = Hari <b>Senin</b> kembali."
+            },
+
+            // ZONA 4: MASTER HOTS & SISA PEMBAGIAN (LEVEL 25 - 30)
+            {
+                level: 25,
+                zone: "Zona 4: Master HOTS Ujian SMP",
+                question: "Tentukan bilangan bulat terbesar yang jika membagi 105 bersisa 5 dan membagi 148 bersisa 4!",
+                options: ["8", "12", "4", "16"],
+                correct: 2,
+                explanation: "<strong>Pembahasan Soal HOTS Sisa Pembagian:</strong><br>• Kurangkan bilangan dengan sisanya:<br>  - $105 - 5 = 100$<br>  - $148 - 4 = 144$<br>• Cari $\\text{FPB}(100, 144)$ dengan trik selisih: $|144 - 100| = 44$.<br>• Faktor dari 44 yang membagi 100 dan 144 adalah $4$."
+            },
+            {
+                level: 26,
+                zone: "Zona 4: Master HOTS Ujian SMP",
+                question: "Bilangan terbesar yang jika membagi 77 bersisa 5 dan membagi 101 bersisa 5 adalah...",
+                options: ["12", "18", "36", "24"],
+                correct: 3,
+                explanation: "<strong>Pembahasan:</strong><br>• $77 - 5 = 72$<br>• $101 - 5 = 96$<br>• Cari $\\text{FPB}(72, 96)$. Selisih $= 96 - 72 = 24$.<br>• $72 \\div 24 = 3$ dan $96 \\div 24 = 4$. Maka $\\text{FPB} = 24$."
+            },
+            {
+                level: 27,
+                zone: "Zona 4: Master HOTS Ujian SMP",
+                question: "Sederhanakan pecahan aljabar $\\frac{12x^2y}{18xy^2}$ dengan membagi pembilang dan penyebut menggunakan FPB-nya!",
+                options: ["$\\frac{2x^2}{3y^2}$", "$\\frac{2x}{3y}$", "$\\frac{3x}{2y}$", "$\\frac{6x}{9y}$"],
+                correct: 1,
+                explanation: "<strong>Pembahasan:</strong><br>• $\\text{FPB}(12x^2y, 18xy^2) = 6xy$.<br>• Pembilang: $\\frac{12x^2y}{6xy} = 2x$.<br>• Penyebut: $\\frac{18xy^2}{6xy} = 3y$.<br>• Bentuk paling sederhana = $\\frac{2x}{3y}$."
+            },
+            {
+                level: 28,
+                zone: "Zona 4: Master HOTS Ujian SMP",
+                question: "Gunakan konsep FPB untuk memfaktorkan bentuk aljabar $15a^2b + 10ab^2$!",
+                options: ["$5a(3ab + 2b)$", "$10ab(a + b)$", "$5ab(3a + 2b)$", "$3ab(5a + 2b)$"],
+                correct: 2,
+                explanation: "<strong>Pembahasan Faktorisasi Aljabar:</strong><br>• Cari $\\text{FPB}(15a^2b, 10ab^2) = 5ab$.<br>• Keluarkan FPB: $15a^2b + 10ab^2 = 5ab\\left(\\frac{15a^2b}{5ab} + \\frac{10ab^2}{5ab}\\right) = 5ab(3a + 2b)$."
+            },
+            {
+                level: 29,
+                zone: "Zona 4: Master HOTS Ujian SMP",
+                question: "Dua bilangan $A$ dan $B$ memiliki $\\text{FPB} = 12$ dan $\\text{KPK} = 180$. Jika $A = 36$, berapakah nilai $B$?",
+                options: ["60", "48", "72", "90"],
+                correct: 0,
+                explanation: "<strong>Pembahasan:</strong><br>• Rumus: $A \\times B = \\text{FPB} \\times \\text{KPK}$<br>• $36 \\times B = 12 \\times 180$<br>• $B = \\frac{12 \\times 180}{36} = \\frac{1}{3} \\times 180 = 60$."
+            },
+            {
+                level: 30,
+                zone: "Zona 4: Master HOTS Ujian SMP",
+                question: "Diberikan tiga suku aljabar: $12x^3y^2$, $18x^2y^4$, dan $30x^4y^3$. Jika $P$ adalah FPB ketiganya dan $Q$ adalah KPK ketiganya, tentukan hasil bagi $Q \\div P$!",
+                options: ["$30x^2y^2$", "$15x^2y^2$", "$30x^4y^4$", "$60x^2y^2$"],
+                correct: 0,
+                explanation: "<strong>Pembahasan Grand Final ANBK:</strong><br>• FPB ($P$) = $6x^2y^2$.<br>• KPK ($Q$) = $180x^4y^4$.<br>• $Q \\div P = \\frac{180x^4y^4}{6x^2y^2} = 30x^{4-2}y^{4-2} = 30x^2y^2$."
+            }
+        ];
+
+        /* ==========================================================================
+           2. GAME STATE MANAGEMENT & LOCALSTORAGE SYSTEM
+           ========================================================================== */
+        const STORAGE_KEY = "kpk_fpb_quiz_v1";
+
+        let gameState = {
+            unlockedLevel: 1,
+            completedLevels: {}, // { levelNum: { stars: 3, score: 100 } }
+            totalScore: 0,
+            totalStars: 0,
+            soundEnabled: true
+        };
+
+        let currentActiveLevel = 1;
+        let attemptCount = 0;
+
+        // Load Game Progress on startup
+        function loadProgress() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    gameState = JSON.parse(saved);
+                } catch (e) {
+                    console.error("Gagal membaca LocalStorage", e);
+                }
+            }
+            updateHeaderStats();
+            renderMap();
+        }
+
+        // Save Progress to LocalStorage
+        function saveProgress() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(gameState));
+            updateHeaderStats();
+        }
+
+        function updateHeaderStats() {
+            document.getElementById('stat-stars').innerText = `${gameState.totalStars} / 90`;
+            document.getElementById('stat-score').innerText = `${gameState.totalScore} Poin`;
+
+            // Progress bar calculation
+            const completedCount = Object.keys(gameState.completedLevels).length;
+            const pct = Math.round((completedCount / 30) * 100);
+            document.getElementById('progress-bar-fill').style.width = `${pct}%`;
+            document.getElementById('progress-text').innerText = `Kemajuan: ${completedCount} dari 30 Level Selesai (${pct}%)`;
+
+            // Sound button icon
+            const soundBtn = document.getElementById('sound-btn');
+            soundBtn.innerHTML = gameState.soundEnabled ? 
+                '<i class="fa-solid fa-volume-high text-xs"></i>' : 
+                '<i class="fa-solid fa-volume-xmark text-xs text-slate-500"></i>';
+        }
+
+        /* ==========================================================================
+           3. WEB AUDIO SYNTHESIZER (NO EXTERNAL AUDIO FILES REQUIRED)
+           ========================================================================== */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'correct') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+                    osc.frequency.exponentialRampToValueAtTime(659.25, audioCtx.currentTime + 0.1); // E5
+                    osc.frequency.exponentialRampToValueAtTime(783.99, audioCtx.currentTime + 0.2); // G5
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.35);
+                } else if (type === 'wrong') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.25);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                } else if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.05);
+                }
+            } catch (e) {
+                // Ignore audio restriction errors
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            saveProgress();
+        }
+
+        /* ==========================================================================
+           4. MAP RENDERING ENGINE
+           ========================================================================== */
+        function renderMap() {
+            const container = document.getElementById('map-grid');
+            container.innerHTML = '';
+
+            const zones = [
+                { name: "Zona 1: Fondasi KPK & FPB Bilangan", levels: [1, 2, 3, 4, 5, 6, 7, 8], badgeBg: "bg-indigo-500", borderClr: "border-indigo-200" },
+                { name: "Zona 2: Suku & Variabel Aljabar", levels: [9, 10, 11, 12, 13, 14, 15, 16], badgeBg: "bg-purple-500", borderClr: "border-purple-200" },
+                { name: "Zona 3: Soal Cerita & Penerapan Nyata", levels: [17, 18, 19, 20, 21, 22, 23, 24], badgeBg: "bg-emerald-500", borderClr: "border-emerald-200" },
+                { name: "Zona 4: Master HOTS & Soal Ujian SMP", levels: [25, 26, 27, 28, 29, 30], badgeBg: "bg-amber-500", borderClr: "border-amber-200" }
+            ];
+
+            zones.forEach((z) => {
+                const zoneBox = document.createElement('div');
+                zoneBox.className = `glass-panel bg-white/80 p-6 rounded-3xl border ${z.borderClr} space-y-5 relative overflow-hidden shadow-lg`;
+
+                // Header Zona
+                zoneBox.innerHTML = `
+                    <div class="flex items-center space-x-3 border-b border-slate-100 pb-3">
+                        <div class="w-3.5 h-3.5 rounded-full ${z.badgeBg} shadow-md"></div>
+                        <h3 class="font-heading font-bold text-slate-800 text-sm sm:text-base">${z.name}</h3>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 pt-1">
+                        <!-- Levels inside zone -->
+                    </div>
+                `;
+
+                const gridContainer = zoneBox.querySelector('.grid');
+
+                z.levels.forEach((lvlNum) => {
+                    const isUnlocked = lvlNum <= gameState.unlockedLevel;
+                    const isCompleted = gameState.completedLevels[lvlNum] !== undefined;
+                    const levelData = gameState.completedLevels[lvlNum] || { stars: 0 };
+
+                    const node = document.createElement('button');
+                    node.onclick = () => openLevelQuiz(lvlNum);
+
+                    let nodeStyle = "bg-slate-100 border-slate-200 text-slate-400 locked shadow-inner";
+                    let starHTML = `<div class="flex justify-center gap-0.5 text-[10px] text-slate-300 mt-1">★ ★ ★</div>`;
+
+                    if (isCompleted) {
+                        nodeStyle = "bg-gradient-to-b from-indigo-500 via-indigo-600 to-purple-600 border-indigo-300 text-white shadow-md shadow-indigo-200";
+                        const yellowStars = "★".repeat(levelData.stars);
+                        const grayStars = "★".repeat(3 - levelData.stars);
+                        starHTML = `<div class="flex justify-center gap-0.5 text-[11px] text-amber-300 mt-1">${yellowStars}<span class="text-indigo-200/50">${grayStars}</span></div>`;
+                    } else if (isUnlocked) {
+                        nodeStyle = "bg-gradient-to-b from-emerald-400 to-teal-600 border-emerald-300 text-white active-pulse shadow-lg shadow-emerald-200";
+                        starHTML = `<div class="text-[10px] text-emerald-100 font-bold mt-1">MULAI!</div>`;
+                    }
+
+                    node.className = `level-node p-4 rounded-2xl border flex flex-col items-center justify-center relative ${nodeStyle}`;
+                    
+                    node.innerHTML = `
+                        <div class="text-[10px] font-bold uppercase tracking-wider opacity-90">Level</div>
+                        <div class="font-heading text-xl font-extrabold my-0.5">${lvlNum}</div>
+                        ${isUnlocked ? (isCompleted ? '<i class="fa-solid fa-check text-xs text-amber-300"></i>' : '<i class="fa-solid fa-play text-xs text-emerald-100"></i>') : '<i class="fa-solid fa-lock text-xs text-slate-400"></i>'}
+                        ${starHTML}
+                    `;
+
+                    gridContainer.appendChild(node);
+                });
+
+                container.appendChild(zoneBox);
+            });
+        }
+
+        /* ==========================================================================
+           5. QUIZ INTERACTION & EXPLANATION ENGINE
+           ========================================================================== */
+        function openLevelQuiz(lvlNum) {
+            if (lvlNum > gameState.unlockedLevel) {
+                playSound('wrong');
+                return;
+            }
+
+            playSound('click');
+            currentActiveLevel = lvlNum;
+            attemptCount = 0;
+
+            const quizData = quizDatabase.find(q => q.level === lvlNum);
+            if (!quizData) return;
+
+            document.getElementById('quiz-level-badge').innerText = `Level ${quizData.level}`;
+            document.getElementById('quiz-zone-tag').innerText = quizData.zone;
+            document.getElementById('quiz-question-text').innerHTML = quizData.question;
+
+            // Render Options
+            const optsContainer = document.getElementById('quiz-options-container');
+            optsContainer.innerHTML = '';
+
+            quizData.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "quiz-opt-btn p-4 rounded-2xl bg-white border border-slate-200 text-slate-700 font-semibold text-xs sm:text-sm text-left hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-900 transition flex items-center justify-between shadow-sm";
+                btn.onclick = () => evaluateAnswer(idx);
+                btn.innerHTML = `
+                    <span>${String.fromCharCode(65 + idx)}. ${optText}</span>
+                    <i class="fa-regular fa-circle text-slate-300 opt-icon"></i>
+                `;
+                optsContainer.appendChild(btn);
+            });
+
+            // Hide explanation box
+            const expBox = document.getElementById('quiz-explanation-box');
+            expBox.classList.add('hidden');
+
+            // Show Modal
+            document.getElementById('quiz-view').classList.remove('hidden');
+
+            // Render MathJax
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise();
+            }
+        }
+
+        function evaluateAnswer(selectedIdx) {
+            attemptCount++;
+            const quizData = quizDatabase.find(q => q.level === currentActiveLevel);
+            const isCorrect = selectedIdx === quizData.correct;
+
+            const optButtons = document.querySelectorAll('.quiz-opt-btn');
+            optButtons.forEach(btn => btn.disabled = true);
+
+            const selectedBtn = optButtons[selectedIdx];
+            const correctBtn = optButtons[quizData.correct];
+
+            if (isCorrect) {
+                playSound('correct');
+                selectedBtn.className = "quiz-opt-btn p-4 rounded-2xl bg-emerald-500 border-2 border-emerald-300 text-white font-bold text-xs sm:text-sm text-left flex items-center justify-between shadow-lg shadow-emerald-200";
+                selectedBtn.querySelector('.opt-icon').className = "fa-solid fa-circle-check text-white text-base";
+                confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 } });
+            } else {
+                playSound('wrong');
+                selectedBtn.className = "quiz-opt-btn p-4 rounded-2xl bg-rose-500 border-2 border-rose-300 text-white font-bold text-xs sm:text-sm text-left flex items-center justify-between shadow-lg shadow-rose-200";
+                selectedBtn.querySelector('.opt-icon').className = "fa-solid fa-circle-xmark text-white text-base";
+
+                // Highlight correct one
+                correctBtn.className = "quiz-opt-btn p-4 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-900 font-bold text-xs sm:text-sm text-left flex items-center justify-between";
+                correctBtn.querySelector('.opt-icon').className = "fa-solid fa-circle-check text-emerald-600 text-base";
+            }
+
+            // Calculate Stars & Score
+            let starsEarned = 1;
+            if (attemptCount === 1) starsEarned = 3;
+            else if (attemptCount === 2) starsEarned = 2;
+
+            let scoreEarned = isCorrect ? (starsEarned * 100) : 20;
+
+            // Update Game State if correct
+            if (isCorrect) {
+                const prevData = gameState.completedLevels[currentActiveLevel];
+                if (!prevData || prevData.stars < starsEarned) {
+                    gameState.completedLevels[currentActiveLevel] = {
+                        stars: starsEarned,
+                        score: scoreEarned
+                    };
+                }
+
+                // Unlock next level
+                if (currentActiveLevel === gameState.unlockedLevel && currentActiveLevel < 30) {
+                    gameState.unlockedLevel = currentActiveLevel + 1;
+                }
+
+                // Recalculate totals
+                let tStars = 0;
+                let tScore = 0;
+                Object.values(gameState.completedLevels).forEach(d => {
+                    tStars += d.stars;
+                    tScore += d.score;
+                });
+                gameState.totalStars = tStars;
+                gameState.totalScore = tScore;
+
+                saveProgress();
+            }
+
+            // Reveal Explanation & Pembahasan
+            const expBox = document.getElementById('quiz-explanation-box');
+            const expIcon = document.getElementById('exp-icon');
+            const expTitle = document.getElementById('exp-title');
+            const expText = document.getElementById('exp-text');
+
+            if (isCorrect) {
+                expBox.className = "space-y-3 p-5 rounded-2xl border bg-emerald-50 border-emerald-200 text-emerald-900 transition-all duration-300";
+                expIcon.className = "fa-solid fa-circle-check text-emerald-600 text-lg";
+                expTitle.innerText = `Jawaban Tepat! (+${scoreEarned} Poin, ${starsEarned} Bintang)`;
+            } else {
+                expBox.className = "space-y-3 p-5 rounded-2xl border bg-rose-50 border-rose-200 text-rose-900 transition-all duration-300";
+                expIcon.className = "fa-solid fa-circle-xmark text-rose-600 text-lg";
+                expTitle.innerText = "Jawaban Belum Tepat. Pelajari Pembahasannya!";
+            }
+
+            expText.innerHTML = quizData.explanation;
+            expBox.classList.remove('hidden');
+
+            if (window.MathJax && window.MathJax.typesetPromise) {
+                window.MathJax.typesetPromise([expText]);
+            }
+        }
+
+        function backToMapAfterAnswer() {
+            playSound('click');
+            document.getElementById('quiz-view').classList.add('hidden');
+            renderMap();
+        }
+
+        function closeQuizToMap() {
+            playSound('click');
+            document.getElementById('quiz-view').classList.add('hidden');
+        }
+
+        /* ==========================================================================
+           6. RESET PROGRESS MODAL HANDLERS
+           ========================================================================== */
+        function confirmResetProgress() {
+            playSound('click');
+            document.getElementById('reset-modal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            playSound('click');
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        function executeResetProgress() {
+            playSound('click');
+            gameState = {
+                unlockedLevel: 1,
+                completedLevels: {},
+                totalScore: 0,
+                totalStars: 0,
+                soundEnabled: true
+            };
+            saveProgress();
+            closeResetModal();
+            renderMap();
+        }
+
+        /* ==========================================================================
+           7. INITIALIZATION ON WINDOW LOAD
+           ========================================================================== */
+        window.onload = function() {
+            loadProgress();
+        };
+    </script>
+</body>
+</html>
